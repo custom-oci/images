@@ -1,0 +1,65 @@
+name: Auto Tag Images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "images/*/*"
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      dirs: ${{ steps.get-dirs.outputs.dirs }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0# Get all tags
+
+      - name: Get changed directories
+        id: get-dirs
+        run: |
+          CHANGED_DIRS=$(git diff --name-only HEAD^ HEAD | grep '^images/' | awk -F'/' '{print $2}' | sort -u | jq -R -s -c 'split("\n")[:-1]')
+          echo "Detected changes in: $CHANGED_DIRS"
+          echo "dirs=$CHANGED_DIRS" >> $GITHUB_OUTPUT
+
+  auto-tag:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.dirs != '[]' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dir: ${{ fromJson(needs.detect-changes.outputs.dirs) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag and increment version
+        id: version
+        run: |
+          DIR="${{ matrix.dir }}"
+          echo "Processing directory: $DIR"
+
+          LATEST_TAG=$(git tag | grep "^$DIR/" | sed "s|$DIR/||" | sort -V | tail -n 1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            NEW_TAG="0.1.0"  # Set default tag version
+          else
+            IFS='.' read -r major minor patch <<< "$LATEST_TAG"
+            NEW_TAG="$major.$minor.$((patch + 1))"
+          fi
+
+          IMAGE_TAG="$DIR/$NEW_TAG"
+          echo "Creating new tag: $IMAGE_TAG"
+          echo "IMAGE_TAG=$FULL_TAG" >> $GITHUB_ENV
+
+      - name: Create and push tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git tag "${{ env.IMAGE_TAG }}"
+          git push origin "${{ env.IMAGE_TAG }}"
