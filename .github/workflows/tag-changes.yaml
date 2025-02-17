@@ -1,5 +1,8 @@
 name: Auto Tag Images
 
+permissions:
+  contents: write
+
 on:
   push:
     branches:
@@ -16,7 +19,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0# Get all tags
+          fetch-depth: 0  # Get all tags
 
       - name: Get changed directories
         id: get-dirs
