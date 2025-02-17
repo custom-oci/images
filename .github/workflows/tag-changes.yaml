@@ -1,7 +1,6 @@
 name: Auto Tag Images
 
-permissions:
-  contents: write
+permissions: write-all # contents: write
 
 on:
   push:
