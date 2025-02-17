@@ -29,6 +29,7 @@ jobs:
     needs: detect-changes
     if: ${{ needs.detect-changes.outputs.dirs != '[]' }}
     runs-on: ubuntu-latest
+    permissions: write-all  # contents: write
     strategy:
       matrix:
         dir: ${{ fromJson(needs.detect-changes.outputs.dirs) }}
@@ -58,7 +59,6 @@ jobs:
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Create and push tag
-        permissions: write-all # contents: write
         #env:
         #  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
